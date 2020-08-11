@@ -11,7 +11,6 @@ ABomb::ABomb()
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
 	CollisionComp->InitSphereRadius(15.0f);
 	CollisionComp->BodyInstance.SetCollisionProfileName("Projectile");
-	this->OnActorHit.AddDynamic(this, &ABomb::OnHit);		// set up a notification for when this component hits something blocking
 
 	// Players can't walk on it
 	CollisionComp->SetWalkableSlopeOverride(FWalkableSlopeOverride(WalkableSlope_Unwalkable, 0.f));
@@ -19,6 +18,10 @@ ABomb::ABomb()
 
 	CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	CollisionComp->SetCollisionResponseToAllChannels(ECR_Block);
+	CollisionComp->SetGenerateOverlapEvents(true);
+
+	// Not blocked by player
+	CollisionComp->SetCollisionObjectType(ECC_GameTraceChannel1);
 
 	// Set as root component
 	RootComponent = CollisionComp;
@@ -37,8 +40,8 @@ ABomb::ABomb()
 	// Use a ProjectileMovementComponent to govern this projectile's movement
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileComp"));
 	ProjectileMovement->UpdatedComponent = CollisionComp;
-	ProjectileMovement->InitialSpeed = 1000.f;
-	ProjectileMovement->MaxSpeed = 1000.f;
+	ProjectileMovement->InitialSpeed = 2000.f;
+	ProjectileMovement->MaxSpeed = 2000.f;
 	ProjectileMovement->bRotationFollowsVelocity = true;
 	ProjectileMovement->bShouldBounce = true;
 
@@ -64,20 +67,8 @@ void ABomb::Tick(float DeltaTime)
 
 }
 
-void ABomb::OnHit(AActor* SelfActor, AActor* OtherActor, FVector NormalImpulse, const FHitResult& Hit)
-{
-	UE_LOG(LogTemp, Warning, TEXT("High"));
-	// Only add impulse and destroy projectile if we hit a physics that is not the bomber
-	if ((OtherActor != NULL) && (OtherActor != this) && (!Cast<ABomber>(OtherActor)))
-	{
-		OnExplode();
-		Destroy();
-	}
-}
-
 void ABomb::OnExplode()
 {
-	UE_LOG(LogTemp, Warning, TEXT("High"));
 	UParticleSystemComponent* Explosion = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionParticles, GetActorTransform());
 	Explosion->SetRelativeScale3D(FVector(4.f));
 
@@ -99,7 +90,7 @@ void ABomb::OnExplode()
 
 			if (Bomber)
 			{
-				Cast<UStaticMeshComponent>((Bomber->GetRootComponent()))->AddRadialImpulse(GetActorLocation(), 500.0f, 1000.0f, ERadialImpulseFalloff::RIF_Linear, true);
+				Cast<UStaticMeshComponent>((Bomber->GetRootComponent()))->AddRadialImpulse(GetActorLocation(), ExplosionRadius, 1000.0f, ERadialImpulseFalloff::RIF_Linear, true);
 			}
 		}
 	}

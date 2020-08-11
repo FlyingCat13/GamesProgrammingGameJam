@@ -20,6 +20,7 @@ ABomber::ABomber()
 	}
 	VisibleComponent->SetSimulatePhysics(true);
 	VisibleComponent->SetMassScale(NAME_None, 10.0f);
+	VisibleComponent->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Ignore);
 
 	ConstructorHelpers::FObjectFinder<UMaterial> TimedBombMaterialObject(TEXT("/Game/StarterContent/Materials/M_Metal_Chrome.M_Metal_Chrome"));
 	if (TimedBombMaterialObject.Succeeded())
@@ -37,9 +38,9 @@ ABomber::ABomber()
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->SetUsingAbsoluteRotation(true); // Rotation of the character should not affect rotation of boom
 	CameraBoom->bDoCollisionTest = false;
-	CameraBoom->TargetArmLength = 500.f;
-	CameraBoom->SocketOffset = FVector(0.f, 0.f, 75.f);
-	CameraBoom->SetRelativeRotation(FRotator(0.f, 180.f, 0.f));
+	CameraBoom->TargetArmLength = 666.f;
+	CameraBoom->SocketOffset = FVector(0.f, 0.f, 110.f);
+	CameraBoom->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 
 	// Create a camera and attach to boom
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -47,6 +48,12 @@ ABomber::ABomber()
 	Camera->bUsePawnControlRotation = false; // We don't want the controller rotating the camera
 
 	ShootRotation = GetActorRotation();
+
+	ShootDirectionIndicator = CreateDefaultSubobject<UArrowComponent>(TEXT("ShootDirection"));
+	ShootDirectionIndicator->SetupAttachment(RootComponent);
+	ShootDirectionIndicator->SetHiddenInGame(false);
+	ShootDirectionIndicator->SetRelativeLocation(FVector(0.0f, 0.0f, 50.f));
+	ShootDirectionIndicator->SetRelativeRotation(ShootRotation);
 }
 
 // Called when the game starts or when spawned
@@ -69,7 +76,11 @@ void ABomber::Tick(float DeltaTime)
 	{
 		ShootRotation.Add(-RotateStep, 0.0f, 0.0f);
 	}
-	UE_LOG(LogTemp, Warning, TEXT("%f"), ShootRotation.Pitch);
+	if (IsCharging)
+	{
+		BombSpeed += FMath::Min(BombSpeedStep * DeltaTime, BOMB_SPEED_MAX);
+	}
+	ShootDirectionIndicator->SetRelativeRotation(ShootRotation);
 }
 
 // Called to bind functionality to input
@@ -100,18 +111,21 @@ void ABomber::ShootBomb()
 		UWorld* const World = GetWorld();
 		if (World != NULL)
 		{	
-			const FRotator SpawnRotation = ShootRotation;
-			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-			const FVector SpawnLocation = GetActorLocation() + FVector(0.0f, 0.0f, 50.0f);
-
-			//Set Spawn Collision Handling Override
-			FActorSpawnParameters ActorSpawnParams;
-			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
-
-			// spawn the projectile at the muzzle
-			World->SpawnActor<ABomb>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+			const FRotator SpawnRotation = ShootDirectionIndicator->GetComponentRotation();
+			FVector Offset = SpawnRotation.RotateVector(FVector::ForwardVector);
+			Offset.Normalize();
+			const FVector SpawnLocation = ShootDirectionIndicator->GetComponentLocation() + Offset * 5;
+			FTransform SpawnTransform(SpawnRotation, SpawnLocation);
+			ABomb* TheBomb = Cast<ABomb>(UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileClass, SpawnTransform, ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding));
+			if (TheBomb != nullptr)
+			{
+				TheBomb->ProjectileMovement->InitialSpeed = BombSpeed;
+				UGameplayStatics::FinishSpawningActor(TheBomb, SpawnTransform);
+			}
 		}
 	}
+	IsCharging = false;
+	BombSpeed = BOMB_SPEED_MIN;
 }
 
 void ABomber::SwitchBomb()
@@ -120,10 +134,12 @@ void ABomber::SwitchBomb()
 	if (IsBombTimed)
 	{
 		VisibleComponent->SetMaterial(0, TimedBombMaterial);
+		ProjectileClass = ATimedBomb::StaticClass();
 	}
 	else
 	{
 		VisibleComponent->SetMaterial(0, InstantBombMaterial);
+		ProjectileClass = AInstantBomb::StaticClass();
 	}
 }
 

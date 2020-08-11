@@ -16,23 +16,23 @@ class FIT2097_GAMEJAM1_API ABomb : public AActor
 {
 	GENERATED_BODY()
 
-	/** Sphere collision component */
-	UPROPERTY(EditAnywhere)
-		class USphereComponent* CollisionComp;
-
-	/** Projectile movement component */
-	UPROPERTY(EditAnywhere)
-		class UProjectileMovementComponent* ProjectileMovement;
-
 	UPROPERTY(EditAnywhere)
 		class UParticleSystem* ExplosionParticles;
 
 	UPROPERTY(EditAnywhere)
-		float ExplosionRadius = 500.0f;
+		float ExplosionRadius = 300.0f;
+
+	/** Sphere collision component */
+	UPROPERTY(EditAnywhere)
+		class USphereComponent* CollisionComp;
 	
 public:	
 	// Sets default values for this actor's properties
 	ABomb();
+
+	/** Projectile movement component */
+	UPROPERTY(EditAnywhere)
+		class UProjectileMovementComponent* ProjectileMovement;
 
 protected:
 	// Called when the game starts or when spawned
@@ -43,11 +43,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION()
-		void OnExplode();
-
-	/** called when projectile hits something */
-	UFUNCTION()
-		void OnHit(AActor* SelfActor, AActor* OtherActor, FVector NormalImpulse, const FHitResult& Hit);
+		virtual void OnExplode();
 
 	/** Returns CollisionComp subobject **/
 	FORCEINLINE class USphereComponent* GetCollisionComp() const { return CollisionComp; }

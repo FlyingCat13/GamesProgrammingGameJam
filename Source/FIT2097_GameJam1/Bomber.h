@@ -5,10 +5,13 @@
 #include "Bomb.h"
 #include "CoreMinimal.h"
 #include "Camera/CameraComponent.h"
+#include "Components/ArrowComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "InstantBomb.h"
 #include "Materials/Material.h"
+#include "TimedBomb.h"
 #include "Bomber.generated.h"
 
 UCLASS()
@@ -33,7 +36,10 @@ class FIT2097_GAMEJAM1_API ABomber : public APawn
 
 	/** Projectile class to spawn */
 	UPROPERTY(EditAnywhere)
-		TSubclassOf<class ABomb> ProjectileClass;
+		TSubclassOf<class ABomb> ProjectileClass = AInstantBomb::StaticClass();
+
+	UPROPERTY(EditAnywhere)
+		class UArrowComponent* ShootDirectionIndicator;
 
 
 public:
@@ -61,6 +67,11 @@ protected:
 	float RotateStep = 1.f;
 	bool IsCharging = false;
 	bool IsBombTimed = false;
+
+	float BombSpeedStep = 720.f;
+	const float BOMB_SPEED_MIN = 200.f;
+	const float BOMB_SPEED_MAX = 2000.f;
+	float BombSpeed = BOMB_SPEED_MIN;
 
 public:	
 	// Called every frame

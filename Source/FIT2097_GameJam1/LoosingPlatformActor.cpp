@@ -41,7 +41,7 @@ void ALoosingPlatformActor::OnBoxOverlapBegin(UPrimitiveComponent* OverlapCompon
 
 	UE_LOG(LogTemp, Warning, TEXT("Overlap has begun"));
 	Message->SetText("Game Over"); 
-	
+	OnTouched.Broadcast();
 }
 
 

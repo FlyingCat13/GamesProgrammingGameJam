@@ -9,6 +9,8 @@
 #include "Components/BoxComponent.h"
 #include "LoosingPlatformActor.generated.h"
 
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTouched);
 UCLASS()
 class FIT2097_GAMEJAM1_API ALoosingPlatformActor : public AActor
 {
@@ -27,6 +29,9 @@ public:
 
 	UPROPERTY(EditAnywhere)
 		UTextRenderComponent* Message; 
+
+	UPROPERTY(BlueprintAssignable)
+		FOnTouched OnTouched;
 
 protected:
 	// Called when the game starts or when spawned
